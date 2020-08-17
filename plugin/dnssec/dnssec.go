@@ -7,6 +7,7 @@ import (
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/cache"
+	"github.com/coredns/coredns/plugin/pkg/dnsutil"
 	"github.com/coredns/coredns/plugin/pkg/response"
 	"github.com/coredns/coredns/plugin/pkg/singleflight"
 	"github.com/coredns/coredns/request"
@@ -70,19 +71,28 @@ func (d Dnssec) Sign(state request.Request, now time.Time, server string) *dns.M
 		return req
 	}
 
-	for _, r := range rrSets(req.Answer) {
+	for _, r := range dnsutil.RRSets(req.Answer) {
+		if r[0].Header().Rrtype == dns.TypeRRSIG {
+			continue
+		}
 		ttl := r[0].Header().Ttl
 		if sigs, err := d.sign(r, state.Zone, ttl, incep, expir, server); err == nil {
 			req.Answer = append(req.Answer, sigs...)
 		}
 	}
-	for _, r := range rrSets(req.Ns) {
+	for _, r := range dnsutil.RRSets(req.Ns) {
+		if r[0].Header().Rrtype == dns.TypeRRSIG {
+			continue
+		}
 		ttl := r[0].Header().Ttl
 		if sigs, err := d.sign(r, state.Zone, ttl, incep, expir, server); err == nil {
 			req.Ns = append(req.Ns, sigs...)
 		}
 	}
-	for _, r := range rrSets(req.Extra) {
+	for _, r := range dnsutil.RRSets(req.Extra) {
+		if r[0].Header().Rrtype == dns.TypeRRSIG {
+			continue
+		}
 		ttl := r[0].Header().Ttl
 		if sigs, err := d.sign(r, state.Zone, ttl, incep, expir, server); err == nil {
 			req.Extra = append(req.Extra, sigs...)
