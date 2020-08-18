@@ -1,32 +1,31 @@
 package dnsutil
 
-import "github.com/miekg/dns"
+import (
+	"strings"
+
+	"github.com/miekg/dns"
+)
 
 type rrset struct {
 	qname string
 	qtype uint16
 }
 
-// RRSets returns the RRSets from rrs as slice of []dns.RR. OPT records are ignored. The ordering of the returned
-// slice is not specified.
+// RRSets returns the RRSets from rrs as slice of []dns.RR. OPT records are ignored.
+// The ordering of the returned slice is not specified.
 func RRSets(rrs []dns.RR) [][]dns.RR {
-	// TODO: include other meta RRs in the ignore list?
 	m := make(map[rrset][]dns.RR)
 
 	for _, r := range rrs {
+		// TODO: include other meta RRs in the ignore list?
 		if r.Header().Rrtype == dns.TypeOPT {
 			continue
 		}
 
-		if s, ok := m[rrset{r.Header().Name, r.Header().Rrtype}]; ok {
-			s = append(s, r)
-			m[rrset{r.Header().Name, r.Header().Rrtype}] = s
-			continue
-		}
+		n := strings.ToLower(r.Header().Name)
+		t := r.Header().Rrtype
 
-		s := make([]dns.RR, 1, 2)
-		s[0] = r
-		m[rrset{r.Header().Name, r.Header().Rrtype}] = s
+		m[rrset{n, t}] = append(m[rrset{n, t}], r)
 	}
 	if len(m) == 0 {
 		return nil
